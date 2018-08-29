@@ -1,0 +1,164 @@
+{
+    "builders": [
+      {
+        "name": "Virtualbox",
+        "type": "virtualbox-iso",
+        "vboxmanage": [
+          [ 
+            "modifyvm", 
+            "{{.Name}}", 
+            "--natpf1", 
+            "guest_winrm,tcp,,5985,,5985" 
+          ],
+          [
+            "modifyvm",
+            "{{.Name}}",
+            "--memory",
+            "4096"
+          ],
+          [
+            "modifyvm",
+            "{{.Name}}",
+            "--vram",
+            "48"
+          ],
+          [
+            "modifyvm",
+            "{{.Name}}",
+            "--cpus",
+            "2"
+          ]
+        ],
+        "output_directory": "{{ user `Output_Directory` }}/OUTPUT-{{user `OutputName`}}-Virtualbox/",
+        "vm_name": "{{user `OutputName`}}-Virtualbox",
+        "guest_additions_mode": "attach",
+        "guest_os_type": "{{user `Guest_OS_Type_Virtualbox`}}",
+        "headless": "{{user `Headless`}}",
+        "iso_url": "{{user `ISO_URL`}}",
+        "hard_drive_interface": "sata",
+        "iso_checksum_type": "none",
+        "communicator": "winrm",
+        "winrm_username": "vagrant",
+        "winrm_password": "vagrant",
+        "winrm_timeout": "12h",
+        "shutdown_command": "a:\\PackerShutdown.bat",
+        "shutdown_timeout": "1h",
+        "post_shutdown_delay": "5m",
+        "floppy_files": [
+          "{{user `Answer_File_Path`}}/Autounattend.xml",
+          "Scripts/Set-RemoteMgmt.ps1",
+          "Floppy_Files/Virtualbox.pac",
+          "Scripts/PackerShutdown.bat"
+        ]
+      }
+    ],
+    "provisioners": [
+      {
+        "type": "powershell",
+        "inline": [
+          "Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))"
+        ]
+      },
+      {
+        "type": "powershell",
+        "inline": [
+          "New-Item -Path 'C:\\PackerScripts' -ItemType Directory -Force",
+          "New-Item -Path 'C:\\PackerScripts\\PowerShell-Modules' -ItemType Directory -Force"
+        ]
+      },
+      {
+        "type": "file",
+        "source": "Scripts/",
+        "Destination": "C:\\PackerScripts"
+      },
+      {
+        "type": "powershell",
+        "inline":[
+          "New-Item C:\\PackerScripts\\_OrchestrationFiles -ItemType 'Directory' -Force",
+          "Write-Output {{ user `PackerOrchestrator_Runlist` }}.Split(',')",
+          "$Runlist = {{ user `PackerOrchestrator_Runlist` }}.Split(',')",
+          "foreach ($item in $Runlist){Add-Content -Path C:\\PackerScripts\\_OrchestrationFiles\\Runlist.po -Value $item -force}"
+        ]
+      },
+      {
+        "type": "file",
+        "source": "Scripts/PackerOrchestratorStart.bat",
+        "Destination": "C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\PackerOrchestratorStart.bat"
+      },
+      {
+        "type": "powershell",
+        "inline": [
+          "#Start-Process Powershell -ArgumentList 'C:\\PackerScripts\\Set-RemoteMgmt.ps1 -DelayedAuto'",
+          "C:\\PackerScripts\\Set-RemoteMgmt.ps1 -DelayedAuto",
+          "#Start-Sleep -Seconds 60",
+          "#C:\\PackerScripts\\PackerOrchestrator.ps1"
+        ],
+        "valid_exit_codes": [0,16001]
+      },
+      {
+        "type": "windows-restart",
+        "restart_timeout": "720m"
+      },
+      {
+        "type": "powershell",
+        "inline":[
+          "Write-Host 'Moving PowerShell modules to the right place.'",
+          "C:\\PackerScripts\\InstallModules.ps1"
+        ]
+      },
+      {   
+        "type": "windows-restart"
+      },
+      {
+        "type": "powershell",
+        "inline": ["New-Item -Path 'C:\\Windows\\Panther\\PackerUnattend' -ItemType Directory -Force"]
+      },
+      {
+        "type": "file",
+        "source": "{{user `Answer_File_Path`}}/Postunattend.xml",
+        "Destination": "C:\\Windows\\Panther\\PackerUnattend\\Postunattend.xml"
+      },
+      {
+        "type": "file",
+        "source": "Scripts/SetupComplete.cmd",
+        "Destination": "C:\\Windows\\Setup\\Scripts\\SetupComplete.cmd"
+      },
+      {
+        "type": "powershell",
+        "script": "Scripts/OS-Cleanup.ps1",
+        "elevated_user": "vagrant",
+        "elevated_password": "vagrant"
+      },
+      {
+        "type":"file",
+        "source":"C:\\Windows\\Packer\\PackerOrchestrator.log",
+        "destination":"Logs/{{build_name}}-{{user `OutputName`}}-PackerOrchestrator-{{user `Datetime`}}.log",
+        "direction":"download"
+      },
+      {
+        "type": "windows-restart"
+      }
+    ],
+    "post-processors": [
+      [
+        {
+          "type": "vagrant",
+          "keep_input_artifact": true,
+          "output": "./{{.BuildName}}-{{user `OutputName`}}.box",
+          "vagrantfile_template": "vagrantfile-windows.template"
+        }
+      ]
+    ],
+    "variables":{
+      "OperatingSystem":"",
+      "Guest_OS_Type_VMware":"",
+      "Guest_OS_Type_Virtualbox":"",
+      "ISO_URL":"",
+      "Answer_File_Path":"",
+      "Headless":"",
+      "Output_Directory":".",
+      "DiskSize":"",
+      "PackerOrchestrator_Runlist":"",
+      "Datetime":""
+    }
+  }
