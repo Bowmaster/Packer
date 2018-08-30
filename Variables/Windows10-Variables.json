@@ -1,0 +1,10 @@
+{
+    "OutputName":"Windows10Pro",
+    "Guest_OS_Type_Virtualbox":"Windows2016_64",
+    "ISO_URL":"ISO/SW_DVD9_Win_Pro_Ent_Edu_N_10_1803_64BIT_English_-4_MLF_X21-87129.iso",
+    "Answer_File_Path":"Answer_Files/2016",
+    "Headless":"true",
+    "Output_Directory":".",
+    "DiskSize":"30720",
+    "PackerOrchestrator_Runlist": "'01-C:\\PackerScripts\\PO-GuestTools.ps1','02-C:\\PackerScripts\\PO-CloudInit.ps1','03-C:\\PackerScripts\\PO-Curtin.ps1','04-C:\\PackerScripts\\PO-Install-Updates.ps1','05-C:\\PackerScripts\\PO-SpectreMeltdown.ps1','06-C:\\PackerScripts\\PO-IEVulnerability.ps1','07-C:\\PackerScripts\\PO-CWDVulnerability.ps1','08-C:\\PackerScripts\\PO-SSLv3Vulnerability.ps1'"
+}
